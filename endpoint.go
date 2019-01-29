@@ -44,21 +44,18 @@ func noMatch(w http.ResponseWriter, r *http.Request) {
 func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&record, "", "\t\t")
 	fmt.Printf("Output type=%T", output)
-	if err != nil {
-		//log error on backend side
-		fmt.Printf("Error %v", err)
-		throwError("msg", 420, w)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	//response := []byte(`{"errors":[], "count":0, "payload":` + output + `}`)
-	w.Write(output)
-	return //json from matched query
+	flush(output, err, w, r)
+	return
 }
 
 func flushList(accumulator []interface{}, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
 	fmt.Printf("Output type=%T", output)
+	flush(output, err, w, r)
+	return
+}
+
+func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//log error on backend side
 		fmt.Printf("Error %v", err)
