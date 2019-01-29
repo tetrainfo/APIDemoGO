@@ -41,6 +41,36 @@ func noMatch(w http.ResponseWriter, r *http.Request) {
 	w.Write(noMatchObj)
 }
 
+func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
+	output, err := json.MarshalIndent(&record, "", "\t\t")
+	fmt.Printf("Output type=%T", output)
+	if err != nil {
+		//log error on backend side
+		fmt.Printf("Error %v", err)
+		throwError("msg", 420, w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	//response := []byte(`{"errors":[], "count":0, "payload":` + output + `}`)
+	w.Write(output)
+	return //json from matched query
+}
+
+func flushList(accumulator []interface{}, w http.ResponseWriter, r *http.Request) {
+	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+	fmt.Printf("Output type=%T", output)
+	if err != nil {
+		//log error on backend side
+		fmt.Printf("Error %v", err)
+		throwError("msg", 420, w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	//response := []byte(`{"errors":[], "count":0, "payload":` + output + `}`)
+	w.Write(output)
+	return //json from matched query
+}
+
 func initDataService() {
 	fmt.Println("")
 	// Open our jsonFile
@@ -86,17 +116,8 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 		//fmt.Println("id: ", id)
 		if idTarget == id {
 			fmt.Println("*ID matched")
-			//marshall this record into json and send out as a response
-			output, err := json.MarshalIndent(&record, "", "\t\t")
-			if err != nil {
-				//log error on backend side
-				fmt.Printf("Error %v", err)
-				throwError("msg", 420, w)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(output)
-			return //json from matched query
+			flushOne(record, w, r)
+			return
 		}
 	}
 	noMatch(w, r)
@@ -118,19 +139,13 @@ func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(accumulator) > 0 {
-		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
-		if err != nil {
-			//log error on backend side
-			fmt.Printf("Error %v", err)
-			throwError("msg", 420, w)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(output)
+		flushList(accumulator, w, r)
 	} else {
 		noMatch(w, r)
 	}
-	//fmt.Printf("Len %d %+V", len(accumulator), accumulator)
+
+	return
+
 }
 
 func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
@@ -150,15 +165,7 @@ func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(accumulator) > 0 {
-		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
-		if err != nil {
-			//log error on backend side
-			fmt.Printf("Error %v", err)
-			throwError("msg", 420, w)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(output)
+		flushList(accumulator, w, r)
 	} else {
 		noMatch(w, r)
 	}
@@ -178,16 +185,7 @@ func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *
 		}
 	}
 	if len(accumulator) > 0 {
-		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
-		if err != nil {
-			//log error on backend side
-			fmt.Printf("Error %v", err)
-			throwError("msg", 420, w)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(output)
-
+		flushList(accumulator, w, r)
 	} else {
 		noMatch(w, r)
 	}
