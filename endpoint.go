@@ -13,6 +13,34 @@ import (
 // arbitraryJSON json stored here
 var arbitraryJSON []map[string]interface{}
 
+func throwError(msg string, statusCode int, w http.ResponseWriter) {
+	//don't actually need this definition
+	type ErrMsg struct {
+		errMsg string
+		code   int
+	}
+
+	errObj := []byte(`{"errMsg": "Uh-oh. Server slurped some bong water :-)", "code": 420}`)
+	w.WriteHeader(http.StatusInternalServerError)      // one way to restatus the header
+	w.Header().Set("Content-Type", "application/json") //another way
+	w.Write(errObj)
+
+}
+
+func noMatch(w http.ResponseWriter, r *http.Request) {
+	//don't actually need this definition. wouldn't make sense to unmarshall and re-marshall
+	type NoMatchMsg struct {
+		count       int
+		msg         string
+		queryString string
+	}
+	quotedQueryString := strconv.Quote(r.URL.String())
+	noMatchObj := []byte(`{"msg": "No data matched the query", "count":0, "queryString":` + quotedQueryString + `}`)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(noMatchObj)
+}
+
 func initDataService() {
 	fmt.Println("")
 	// Open our jsonFile
@@ -27,24 +55,53 @@ func initDataService() {
 	jsonObjArray, _ := ioutil.ReadAll(jsonFile) //
 
 	json.Unmarshal([]byte(jsonObjArray), &arbitraryJSON) //data -> arbitraryJSON
-	/*
-		record := arbitraryJSON[0]
 
-		idFloat := record["id"].(float64)
-		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
+	fmt.Println("First record==============")
+	record := arbitraryJSON[0]
 
-		state := record["consumer"].(map[string]interface{})["state"]
-		coverage := record["coverage"].(map[string]interface{})["former_insurer"]
-		vehiclesArray := record["vehicle"] //in theory this is an array of map
-		fmt.Printf("id: (%v, %T) \nstate: %s \ncoverage: %s \n", id, id, state, coverage)
-		for _, vehicle := range vehiclesArray.([]interface{}) {
-			make := vehicle.(map[string]interface{})["make"]
-			fmt.Printf("make: %s", make)
-		}
-	*/
+	idFloat := record["id"].(float64)
+	id := strconv.FormatFloat(idFloat, 'f', 0, 64)
+
+	state := record["consumer"].(map[string]interface{})["state"]
+	coverage := record["coverage"].(map[string]interface{})["former_insurer"]
+	vehiclesArray := record["vehicle"] //in theory this is an array of map
+	fmt.Printf("id: (%v, %T) \nstate: %s \ncoverage: %s \n", id, id, state, coverage)
+	for _, vehicle := range vehiclesArray.([]interface{}) {
+		make := vehicle.(map[string]interface{})["make"]
+		fmt.Printf("make: %s", make)
+	}
+	fmt.Println("\nEnd First record==============")
 
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
+}
+
+//this is where we need a json blob that can be easily referenced
+
+func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("query by id (%s, %T) ", idTarget, idTarget)
+	for _, record := range arbitraryJSON {
+		idFloat := record["id"].(float64)
+		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
+		//fmt.Println("id: ", id)
+		if idTarget == id {
+			fmt.Println("*ID matched")
+			//marshall this record into json and send out as a response
+			output, err := json.MarshalIndent(&record, "", "\t\t")
+			if err != nil {
+				//log error on backend side
+				fmt.Printf("Error %v", err)
+				throwError("msg", 420, w)
+				return
+
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(output)
+			return //json from matched query
+		}
+	}
+	noMatch(w, r)
+	return
 }
 
 func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
@@ -58,19 +115,6 @@ func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-}
-
-func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("query by id (%s, %T) ", idTarget, idTarget)
-	for _, record := range arbitraryJSON {
-		idFloat := record["id"].(float64)
-		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
-		//fmt.Println("id: ", id)
-		if idTarget == id {
-			fmt.Println("*ID matched")
-			//marshall this record into json and send out as a response
-		}
-	}
 }
 
 func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
