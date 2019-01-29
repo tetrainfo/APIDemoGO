@@ -62,9 +62,12 @@ func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
 		throwError("msg", 420, w)
 		return
 	}
+	//todo get count as a string
+	count := "1" //strconv.Quote(1)
+	payloadStr := string([]byte(output[:]))
+	response := []byte(`{"errors":[], "count":` + count + `, "payload":` + payloadStr + `}`)
 	w.Header().Set("Content-Type", "application/json")
-	//response := []byte(`{"errors":[], "count":0, "payload":` + output + `}`)
-	w.Write(output)
+	w.Write(response)
 	return //json from matched query
 }
 
