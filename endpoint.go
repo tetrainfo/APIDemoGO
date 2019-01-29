@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// arbitrary json stored here
-var arbitrary []map[string]interface{}
+// arbitraryJson json stored here
+var arbitraryJson []map[string]interface{}
 
 func initDataService() {
 	fmt.Println("data service start")
@@ -26,9 +26,9 @@ func initDataService() {
 
 	jsonObjArray, _ := ioutil.ReadAll(jsonFile) // a
 
-	json.Unmarshal([]byte(jsonObjArray), &arbitrary) //data -> arbitrary
+	json.Unmarshal([]byte(jsonObjArray), &arbitraryJson) //data -> arbitraryJson
 	/*
-		record := arbitrary[0]
+		record := arbitraryJson[0]
 
 		idFloat := record["id"].(float64)
 		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
@@ -50,7 +50,7 @@ func initDataService() {
 func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by state %s\n ", stateTarget)
 	//cycle thru each record
-	for _, record := range arbitrary {
+	for _, record := range arbitraryJson {
 		state := record["consumer"].(map[string]interface{})["state"].(string)
 		//fmt.Println("state: ", state)
 		if strings.ToLower(state) == strings.ToLower(stateTarget) {
@@ -62,7 +62,7 @@ func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 
 func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by id (%s, %T) ", idTarget, idTarget)
-	for _, record := range arbitrary {
+	for _, record := range arbitraryJson {
 		idFloat := record["id"].(float64)
 		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
 		//fmt.Println("id: ", id)
@@ -74,7 +74,7 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 
 func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by make %s ", makeTarget)
-	for _, record := range arbitrary {
+	for _, record := range arbitraryJson {
 		vehiclesArray := record["vehicle"] //this is an array of empty interfaces
 		for _, vehicle := range vehiclesArray.([]interface{}) {
 			make := vehicle.(map[string]interface{})["make"].(string)
@@ -90,7 +90,7 @@ func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 //note go doesn't like underscores in vars
 func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by former_insurer %s ", formerInsurerTarget)
-	for _, record := range arbitrary {
+	for _, record := range arbitraryJson {
 		formerInsurer := record["coverage"].(map[string]interface{})["former_insurer"].(string)
 		//fmt.Println("former_insurer: ", formerInsurer)
 		if strings.ToLower(formerInsurer) == strings.ToLower(formerInsurerTarget) {
