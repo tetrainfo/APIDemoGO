@@ -14,7 +14,7 @@ import (
 var arbitraryJSON []map[string]interface{}
 
 func initDataService() {
-	fmt.Println("data service start")
+	fmt.Println("")
 	// Open our jsonFile
 	jsonFile, err := os.Open("./mockData/auto.leads.json")
 	// if we os.Open returns an error then handle it
@@ -22,9 +22,9 @@ func initDataService() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("Successfully Opened mockData/auto.leads.json")
+	fmt.Println("Data Service successfully opened mockData/auto.leads.json. ")
 
-	jsonObjArray, _ := ioutil.ReadAll(jsonFile) // a
+	jsonObjArray, _ := ioutil.ReadAll(jsonFile) //
 
 	json.Unmarshal([]byte(jsonObjArray), &arbitraryJSON) //data -> arbitraryJSON
 	/*
@@ -68,6 +68,7 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 		//fmt.Println("id: ", id)
 		if idTarget == id {
 			fmt.Println("*ID matched")
+			//marshall this record into json and send out as a response
 		}
 	}
 }
