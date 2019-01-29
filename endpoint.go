@@ -56,7 +56,7 @@ func initDataService() {
 
 	json.Unmarshal([]byte(jsonObjArray), &arbitraryJSON) //data -> arbitraryJSON
 
-	fmt.Println("First record==============")
+	fmt.Println("First record looks like==============")
 	record := arbitraryJSON[0]
 
 	idFloat := record["id"].(float64)
@@ -93,7 +93,6 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("Error %v", err)
 				throwError("msg", 420, w)
 				return
-
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(output)
@@ -106,19 +105,37 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 
 func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by state %s\n ", stateTarget)
-	//cycle thru each record
+	//cycle thru each record, accumulate matches
+
+	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		state := record["consumer"].(map[string]interface{})["state"].(string)
 		//fmt.Println("state: ", state)
 		if strings.ToLower(state) == strings.ToLower(stateTarget) {
 			fmt.Println("*State Matched")
+			//accumulate
+			accumulator = append(accumulator, record)
 		}
 	}
-
+	if len(accumulator) > 0 {
+		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+		if err != nil {
+			//log error on backend side
+			fmt.Printf("Error %v", err)
+			throwError("msg", 420, w)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(output)
+	} else {
+		noMatch(w, r)
+	}
+	//fmt.Printf("Len %d %+V", len(accumulator), accumulator)
 }
 
 func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by make %s ", makeTarget)
+	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		vehiclesArray := record["vehicle"] //this is an array of empty interfaces
 		for _, vehicle := range vehiclesArray.([]interface{}) {
@@ -127,20 +144,52 @@ func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 
 			if strings.ToLower(makeTarget) == strings.ToLower(make) {
 				fmt.Println("*Make matched", make)
+				//accumulate
+				accumulator = append(accumulator, record)
 			}
 		}
 	}
+	if len(accumulator) > 0 {
+		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+		if err != nil {
+			//log error on backend side
+			fmt.Printf("Error %v", err)
+			throwError("msg", 420, w)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(output)
+	} else {
+		noMatch(w, r)
+	}
 }
 
-//note go doesn't like underscores in vars
+//note: go doesn't like underscores in vars, use camelCase
 func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("query by former_insurer %s ", formerInsurerTarget)
+	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		formerInsurer := record["coverage"].(map[string]interface{})["former_insurer"].(string)
 		//fmt.Println("former_insurer: ", formerInsurer)
 		if strings.ToLower(formerInsurer) == strings.ToLower(formerInsurerTarget) {
 			fmt.Println("*Insurer matched", formerInsurer)
+			//accumulate
+			accumulator = append(accumulator, record)
 		}
+	}
+	if len(accumulator) > 0 {
+		output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+		if err != nil {
+			//log error on backend side
+			fmt.Printf("Error %v", err)
+			throwError("msg", 420, w)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(output)
+
+	} else {
+		noMatch(w, r)
 	}
 }
 
