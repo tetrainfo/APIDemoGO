@@ -82,7 +82,7 @@ func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(accumulator) > 0 {
-		flushList(accumulator, w, r)
+		flushList(accumulator, len(accumulator), w, r)
 	} else {
 		noMatch(w, r)
 	}
@@ -109,7 +109,7 @@ func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(accumulator) > 0 {
-		flushList(accumulator, w, r)
+		flushList(accumulator, len(accumulator), w, r)
 	} else {
 		noMatch(w, r)
 	}
@@ -129,7 +129,20 @@ func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *
 		}
 	}
 	if len(accumulator) > 0 {
-		flushList(accumulator, w, r)
+		flushList(accumulator, len(accumulator), w, r)
+	} else {
+		noMatch(w, r)
+	}
+}
+
+//DataService query by pages, at the moment, only all content is supported
+func queryPages(pageTarget string, w http.ResponseWriter, r *http.Request) {
+	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
+	for _, record := range arbitraryJSON {
+		accumulator = append(accumulator, record)
+	}
+	if len(accumulator) > 0 {
+		flushList(accumulator, len(accumulator), w, r)
 	} else {
 		noMatch(w, r)
 	}
@@ -169,18 +182,19 @@ func noMatch(w http.ResponseWriter, r *http.Request) {
 func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&record, "", "\t\t")
 	//fmt.Printf("Output type=%T", output)
-	flush(output, err, w, r)
+	count := 1
+	flush(output, count, err, w, r)
 	return
 }
 
-func flushList(accumulator []interface{}, w http.ResponseWriter, r *http.Request) {
+func flushList(accumulator []interface{}, count int, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
 	//fmt.Printf("Output type=%T", output)
-	flush(output, err, w, r)
+	flush(output, count, err, w, r)
 	return
 }
 
-func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
+func flush(output []byte, count int, err error, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//log error on backend side
 		fmt.Printf("Error %v", err)
@@ -188,9 +202,9 @@ func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//todo get count as a string
-	count := "1" //strconv.Quote(1)
+	countStr := strconv.Itoa(count)
 	payloadStr := string([]byte(output[:]))
-	response := []byte(`{"errors":[], "count":` + count + `, "payload":` + payloadStr + `}`)
+	response := []byte(`{"errors":[], "count":` + countStr + `, "payload":` + payloadStr + `}`)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
 	return //json from matched query
@@ -202,6 +216,12 @@ func get(w http.ResponseWriter, r *http.Request) (err error) {
 	state := r.FormValue("state")
 	make := r.FormValue("make")
 	formerInsurer := r.FormValue("former_insurer")
+	list := r.FormValue("list")
+
+	if len(id) != 0 {
+		queryByID(id, w, r)
+		return
+	}
 	if len(id) != 0 {
 		queryByID(id, w, r)
 		return
@@ -216,6 +236,10 @@ func get(w http.ResponseWriter, r *http.Request) (err error) {
 	}
 	if len(formerInsurer) != 0 {
 		queryByFormerInsurer(formerInsurer, w, r)
+		return
+	}
+	if len(list) != 0 {
+		queryPages("all", w, r)
 		return
 	}
 	noMatch(w, r)

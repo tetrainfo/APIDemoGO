@@ -63,6 +63,7 @@ http://localhost:8080/v1/quotes?make=ford should return a list for consumers hav
 
 http://localhost:8080/v1/quotes?former_insurer="Monolith Casualty" should return a list for consumers with the specified insurer
 
+http://localhost:8080/v1/quotes?list=all should return the entire list
 
 ```To Do:
 
