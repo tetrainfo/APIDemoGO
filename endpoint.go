@@ -10,69 +10,12 @@ import (
 	"strings"
 )
 
-// arbitraryJSON json stored here
+// arbitraryJSON json stored here by initDataService
 var arbitraryJSON []map[string]interface{}
 
-func throwError(msg string, statusCode int, w http.ResponseWriter) {
-	//don't actually need this definition
-	type ErrMsg struct {
-		errMsg string
-		code   int
-	}
-
-	errObj := []byte(`{"errMsg": "Uh-oh. Server slurped some bong water :-)", "code": 420}`)
-	w.WriteHeader(http.StatusInternalServerError)      // one way to restatus the header
-	w.Header().Set("Content-Type", "application/json") //another way
-	w.Write(errObj)
-
-}
-
-func noMatch(w http.ResponseWriter, r *http.Request) {
-	//don't actually need this definition. wouldn't make sense to unmarshall and re-marshall
-	type NoMatchMsg struct {
-		count       int
-		msg         string
-		queryString string
-	}
-	quotedQueryString := strconv.Quote(r.URL.String())
-	noMatchObj := []byte(`{"msg": "No data matched the query", "count":0, "queryString":` + quotedQueryString + `}`)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(noMatchObj)
-}
-
-func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
-	output, err := json.MarshalIndent(&record, "", "\t\t")
-	fmt.Printf("Output type=%T", output)
-	flush(output, err, w, r)
-	return
-}
-
-func flushList(accumulator []interface{}, w http.ResponseWriter, r *http.Request) {
-	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
-	fmt.Printf("Output type=%T", output)
-	flush(output, err, w, r)
-	return
-}
-
-func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
-	if err != nil {
-		//log error on backend side
-		fmt.Printf("Error %v", err)
-		throwError("msg", 420, w)
-		return
-	}
-	//todo get count as a string
-	count := "1" //strconv.Quote(1)
-	payloadStr := string([]byte(output[:]))
-	response := []byte(`{"errors":[], "count":` + count + `, "payload":` + payloadStr + `}`)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(response)
-	return //json from matched query
-}
-
+//normally one would connect to a db adapter in this function, this func just opens a file and unmarshalls the json into memory
 func initDataService() {
-	fmt.Println("")
+	// this function takes a jsonFile and deposits its object in memory at arbitrayJSON
 	// Open our jsonFile
 	jsonFile, err := os.Open("./mockData/auto.leads.json")
 	// if we os.Open returns an error then handle it
@@ -106,14 +49,13 @@ func initDataService() {
 	defer jsonFile.Close()
 }
 
-//this is where we need a json blob that can be easily referenced
-
+//DataService queryByID
 func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("query by id (%s, %T) ", idTarget, idTarget)
+	//fmt.Printf("query by id (%s, %T) ", idTarget, idTarget)
 	for _, record := range arbitraryJSON {
 		idFloat := record["id"].(float64)
 		id := strconv.FormatFloat(idFloat, 'f', 0, 64)
-		//fmt.Println("id: ", id)
+		//fmt.Println("Match Criteria id: ", id)
 		if idTarget == id {
 			fmt.Println("*ID matched")
 			flushOne(record, w, r)
@@ -124,14 +66,15 @@ func queryByID(idTarget string, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+//DataService queryByState
 func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("query by state %s\n ", stateTarget)
-	//cycle thru each record, accumulate matches
+	//fmt.Printf("query by state %s\n ", stateTarget)
 
+	//cycle thru each record, accumulate matches
 	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		state := record["consumer"].(map[string]interface{})["state"].(string)
-		//fmt.Println("state: ", state)
+		//fmt.Println("Match criteria state: ", state)
 		if strings.ToLower(state) == strings.ToLower(stateTarget) {
 			fmt.Println("*State Matched")
 			//accumulate
@@ -148,8 +91,9 @@ func queryByState(stateTarget string, w http.ResponseWriter, r *http.Request) {
 
 }
 
+//DataService queryByMake
 func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("query by make %s ", makeTarget)
+	//fmt.Printf("query by make %s ", makeTarget)
 	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		vehiclesArray := record["vehicle"] //this is an array of empty interfaces
@@ -171,9 +115,9 @@ func queryByMake(makeTarget string, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//note: go doesn't like underscores in vars, use camelCase
+//DataService queryByFormerInsurer
 func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("query by former_insurer %s ", formerInsurerTarget)
+	//fmt.Printf("query by former_insurer %s ", formerInsurerTarget)
 	accumulator := make([]interface{}, 0) //populate an empty undefined type slice set
 	for _, record := range arbitraryJSON {
 		formerInsurer := record["coverage"].(map[string]interface{})["former_insurer"].(string)
@@ -191,30 +135,95 @@ func queryByFormerInsurer(formerInsurerTarget string, w http.ResponseWriter, r *
 	}
 }
 
-func get(w http.ResponseWriter, r *http.Request) (err error) {
-	fmt.Println("obtain parameters via get")
+//todo: make a real error function
+func throwError(msg string, statusCode int, w http.ResponseWriter) {
+	//don't actually need this definition
+	type ErrMsg struct {
+		errMsg string
+		code   int
+	}
 
+	errObj := []byte(`{"errMsg": "Uh-oh. Server slurped some bong water :-)", "code": 420}`)
+	w.WriteHeader(http.StatusInternalServerError)      // one way to restatus the header
+	w.Header().Set("Content-Type", "application/json") //another way
+	w.Write(errObj)
+
+}
+
+//query returned no match
+func noMatch(w http.ResponseWriter, r *http.Request) {
+	//don't actually need this definition. wouldn't make sense to unmarshall and re-marshall
+	type NoMatchMsg struct {
+		count       int
+		msg         string
+		queryString string
+	}
+	quotedQueryString := strconv.Quote(r.URL.String())
+	noMatchObj := []byte(`{"msg": "No data matched the query", "count":0, "queryString":` + quotedQueryString + `}`)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(noMatchObj)
+}
+
+//
+func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
+	output, err := json.MarshalIndent(&record, "", "\t\t")
+	//fmt.Printf("Output type=%T", output)
+	flush(output, err, w, r)
+	return
+}
+
+func flushList(accumulator []interface{}, w http.ResponseWriter, r *http.Request) {
+	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+	//fmt.Printf("Output type=%T", output)
+	flush(output, err, w, r)
+	return
+}
+
+func flush(output []byte, err error, w http.ResponseWriter, r *http.Request) {
+	if err != nil {
+		//log error on backend side
+		fmt.Printf("Error %v", err)
+		throwError("msg", 420, w)
+		return
+	}
+	//todo get count as a string
+	count := "1" //strconv.Quote(1)
+	payloadStr := string([]byte(output[:]))
+	response := []byte(`{"errors":[], "count":` + count + `, "payload":` + payloadStr + `}`)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
+	return //json from matched query
+}
+
+//controller
+func get(w http.ResponseWriter, r *http.Request) (err error) {
 	id := r.FormValue("id")
 	state := r.FormValue("state")
 	make := r.FormValue("make")
 	formerInsurer := r.FormValue("former_insurer")
 	if len(id) != 0 {
 		queryByID(id, w, r)
+		return
 	}
 	if len(state) != 0 {
 		queryByState(state, w, r)
+		return
 	}
 	if len(make) != 0 {
 		queryByMake(make, w, r)
+		return
 	}
 	if len(formerInsurer) != 0 {
 		queryByFormerInsurer(formerInsurer, w, r)
+		return
 	}
-
+	noMatch(w, r)
 	return
 }
 
-//process params via url or (later post body)
+//handler: capture parameters multiple ways: process params via url or (later post body)
+//also a place where data posts, puts, patches and deletes would be handled
 func params(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch r.Method {
@@ -231,10 +240,11 @@ func params(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	//simple. hit the uri:port. then serve index.html out of a folder called public
-	//set version of api
+	//hook up the data
 	initDataService()
+	//set version of api
 	const basepath = "/v1"
+	//set  up built in mux, with path and handler
 	http.HandleFunc(basepath+"/quotes", params)
 	http.Handle("/", http.FileServer(http.Dir("./public")))
 	http.ListenAndServe(":8080", nil)
