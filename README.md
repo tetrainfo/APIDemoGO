@@ -1,5 +1,5 @@
 # API Interview Test Project 
-This is an example Node API service using static data in a json file located in the mock data directory.
+This is an example Golang API service using static data in a json file located in the mock data directory.
 
 Instructions
 1.	Create a document/text file with a list of possible assumptions that you would make based on the Feature Criteria Requested
@@ -27,10 +27,10 @@ Go Notes
 For the Go approach I decided to keep it really simple.  No dependancies other than what comes standard.  One file. Ideal for a microservice.
 
 That meant that the query schema had to change.  The delivered http router only supports static paths. So a query where
-the id was in the url like this /:id  had to change to ?id=.
+the id was in the url like this /:id  had to change to ?id=.  While I was at it, I decided to a versioning schema to the url.
+That adds a /v1 in front the quotes path.
 
-Unlike JavaScript and Node, Go requires that json data be unmarshalled and marshalled into maps, or arrays of maps. Could have explicitly
-defined the data structure into various types.  Decided instead to use the Go empty interface{}. That means that the solution is much more flexible, requiring only the key query items to be in the json blob.
+Unlike JavaScript and Node, Go requires that json data be unmarshalled and marshalled into maps, or arrays of maps. Could have explicitly defined the data structure into various types.  Decided instead to use the Go empty interface{}. That means that the solution is much more flexible, requiring only the key query items to be in the json blob.
 
 Go compiles to an exe.  In theory that's all that's required for a Windows machine.  The exec can be compiled from the source.
 
@@ -55,13 +55,13 @@ $ .\APIDemoGo.exe
 
 To test, use these sample urls with an tool like Postman at https://www.getpostman.com 
 ```
-http://localhost:8080/quotes?id=998 should return a single response for a customer with id = 998
+http://localhost:8080/v1/quotes?id=998 should return a single response for a customer with id = 998
 
-http://localhost:8080/quotes?state=IL should return a list for consumers with state=IL or state="IL"
+http://localhost:8080/v1/quotes?state=IL should return a list for consumers with state=IL or state="IL"
 
-http://localhost:8080/quotes?make=ford should return a list for consumers have one or more Ford vehicles
+http://localhost:8080/v1/quotes?make=ford should return a list for consumers have one or more Ford vehicles
 
-http://localhost:8080/quotes?former_insurer="Monolith Casualty" should return a list for consumers with the specified insurer
+http://localhost:8080/v1/quotes?former_insurer="Monolith Casualty" should return a list for consumers with the specified insurer
 
 
 ```To Do:
