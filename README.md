@@ -67,12 +67,12 @@ http://localhost:8080/v1/quotes?list=all should return the entire list
 
 Recently added: the ability to send the parameters via form data
 
-```bash
+
 make:ford
-```bash
+
 
 or  json post (only one query will be satisfied)
-```bash
+
 {
     "state": "IL",
     "make" : "Ford",
@@ -80,7 +80,7 @@ or  json post (only one query will be satisfied)
     "list": "all",
     "id": "998"
 }
-```bash
+
 
 ```To Do:
 
