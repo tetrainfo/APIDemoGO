@@ -149,18 +149,16 @@ func queryPages(pageTarget string, w http.ResponseWriter, r *http.Request) {
 }
 
 //todo: make a real error function
-func throwError(msg string, statusCode int, w http.ResponseWriter) {
+func throwError(err error, w http.ResponseWriter) {
 	//don't actually need this definition
 	type ErrMsg struct {
 		errMsg string
-		code   int
 	}
-
-	errObj := []byte(`{"errMsg": "Uh-oh. Server slurped some bong water :-)", "code": 420}`)
-	w.WriteHeader(http.StatusInternalServerError)      // one way to restatus the header
+	errObj := []byte(`{"errMsg": ` + strconv.Quote(err.Error()) + `}`)
 	w.Header().Set("Content-Type", "application/json") //another way
 	w.Write(errObj)
-
+	fmt.Printf("%s", errObj)
+	return
 }
 
 //query returned no match
@@ -176,11 +174,18 @@ func noMatch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(noMatchObj)
+	return
 }
 
 //
 func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&record, "", "\t\t")
+	if err != nil {
+		//log error on backend side
+		fmt.Printf("Error %v", err)
+		throwError(err, w)
+		return
+	}
 	//fmt.Printf("Output type=%T", output)
 	count := 1
 	flush(output, count, err, w, r)
@@ -189,19 +194,18 @@ func flushOne(record map[string]interface{}, w http.ResponseWriter, r *http.Requ
 
 func flushList(accumulator []interface{}, count int, w http.ResponseWriter, r *http.Request) {
 	output, err := json.MarshalIndent(&accumulator, "", "\t\t")
+	if err != nil {
+		//log error on backend side
+		fmt.Printf("Error %v", err)
+		throwError(err, w)
+		return
+	}
 	//fmt.Printf("Output type=%T", output)
 	flush(output, count, err, w, r)
 	return
 }
 
 func flush(output []byte, count int, err error, w http.ResponseWriter, r *http.Request) {
-	if err != nil {
-		//log error on backend side
-		fmt.Printf("Error %v", err)
-		throwError("msg", 420, w)
-		return
-	}
-	//todo get count as a string
 	countStr := strconv.Itoa(count)
 	payloadStr := string([]byte(output[:]))
 	response := []byte(`{"errors":[], "count":` + countStr + `, "payload":` + payloadStr + `}`)
@@ -210,52 +214,80 @@ func flush(output []byte, count int, err error, w http.ResponseWriter, r *http.R
 	return //json from matched query
 }
 
-//controller
-func get(w http.ResponseWriter, r *http.Request) (err error) {
-	id := r.FormValue("id")
-	state := r.FormValue("state")
-	make := r.FormValue("make")
-	formerInsurer := r.FormValue("former_insurer")
-	list := r.FormValue("list")
+type qParams struct {
+	ID            string `json:"id"`
+	State         string `json:"state"`
+	Make          string `json:"make"`
+	FormerInsurer string `json:"former_insurer"`
+	List          string `json:"list"`
+}
 
-	if len(id) != 0 {
-		queryByID(id, w, r)
+//controller
+func dispatch(param qParams, w http.ResponseWriter, r *http.Request) {
+
+	if len(param.ID) != 0 {
+		fmt.Println("param.ID", param.ID)
+		queryByID(param.ID, w, r)
 		return
 	}
-	if len(id) != 0 {
-		queryByID(id, w, r)
+
+	if len(param.State) != 0 {
+		fmt.Println("state ", param.State)
+		queryByState(param.State, w, r)
 		return
 	}
-	if len(state) != 0 {
-		queryByState(state, w, r)
+	if len(param.Make) != 0 {
+		queryByMake(param.Make, w, r)
 		return
 	}
-	if len(make) != 0 {
-		queryByMake(make, w, r)
+	if len(param.FormerInsurer) != 0 {
+		queryByFormerInsurer(param.FormerInsurer, w, r)
 		return
 	}
-	if len(formerInsurer) != 0 {
-		queryByFormerInsurer(formerInsurer, w, r)
-		return
-	}
-	if len(list) != 0 {
+	if len(param.List) != 0 {
 		queryPages("all", w, r)
 		return
 	}
+
 	noMatch(w, r)
-	return
 }
 
-//handler: capture parameters multiple ways: process params via url or (later post body)
-//also a place where data posts, puts, patches and deletes would be handled
+//handler: capture parameters multiple ways: process params via url, form-data or json post body
 func params(w http.ResponseWriter, r *http.Request) {
 	var err error
+	var param qParams
 	switch r.Method {
 	case "GET":
-		err = get(w, r)
+		param.ID = r.FormValue("id")
+		param.State = r.FormValue("state")
+		param.Make = r.FormValue("make")
+		param.FormerInsurer = r.FormValue("former_insurer")
+		param.List = r.FormValue("list")
+		dispatch(param, w, r)
 	case "POST":
-		//err = post( w, r ) //todo: try passing params in body
+		contentType := r.Header.Get("Content-Type")
+		if strings.ToLower(contentType) != "application/json" {
+			//x-form-urlencoded, form-data seem to work with this
+			param.ID = r.FormValue("id")
+			param.State = r.FormValue("state")
+			param.Make = r.FormValue("make")
+			param.FormerInsurer = r.FormValue("former_insurer")
+			param.List = r.FormValue("list")
+			dispatch(param, w, r)
+		} else { //params via json
+			decoder := json.NewDecoder(r.Body)
+			//will panic here if the id param is posted as an integer
+			err := decoder.Decode(&param)
+			if err != nil {
+				throwError(err, w)
+				//panic(err)
+			} else {
+				dispatch(param, w, r)
+			}
+		}
+		return
 	}
+
 	if err != nil {
 		fmt.Println("Internal server error")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
