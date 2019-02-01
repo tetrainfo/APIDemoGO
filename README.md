@@ -65,6 +65,23 @@ http://localhost:8080/v1/quotes?former_insurer="Monolith Casualty" should return
 
 http://localhost:8080/v1/quotes?list=all should return the entire list
 
+Recently added: the ability to send the parameters via form data
+
+```bash
+make:ford
+```bash
+
+or  json post (only one query will be satisfied)
+```bash
+{
+    "state": "IL",
+    "make" : "Ford",
+    "former_insurer": "Monolith Casualty",
+    "list": "all",
+    "id": "998"
+}
+```bash
+
 ```To Do:
 
 Make the search criteria a bit fuzzier using a wildcard
