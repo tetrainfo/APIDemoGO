@@ -50,7 +50,9 @@ $ go build
 To run the project, navigate to the APIDemo folder and enter
 
 ```bash
-$ .\APIDemoGo.exe
+$ ./APIDemoGo.exe
+
+Other shells try .\APIDemoGo.exe
 ```
 
 To test, use these sample urls with an tool like Postman at https://www.getpostman.com 
